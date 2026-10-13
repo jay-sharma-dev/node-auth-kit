@@ -50,12 +50,34 @@ export {
 export interface CreateAuthOptions {
   /**
    * Optional SMTP/SMS (or custom) delivery adapter.
-   * When provided, `createAuth()` also returns `otp` and `passwordReset`.
+   * When provided, `createAuth()` also returns `passwordReset`.
    */
   delivery?: OtpDelivery;
 }
 
-export function createAuth(options: CreateAuthOptions = {}) {
+export interface CreateAuthOptionsWithDelivery extends CreateAuthOptions {
+  delivery: OtpDelivery;
+}
+
+export type AuthKit = {
+  password: ReturnType<typeof createPasswordManager>;
+  tokens: ReturnType<typeof createTokenManager>;
+  otp: ReturnType<typeof createOtpManager>;
+  middleware: ReturnType<typeof createAuthMiddleware>;
+};
+
+export type AuthKitWithDelivery = AuthKit & {
+  delivery: OtpDelivery;
+  passwordReset: ReturnType<typeof createPasswordResetManager>;
+};
+
+export function createAuth(
+  options: CreateAuthOptionsWithDelivery
+): AuthKitWithDelivery;
+export function createAuth(options?: CreateAuthOptions): AuthKit;
+export function createAuth(
+  options: CreateAuthOptions = {}
+): AuthKit | AuthKitWithDelivery {
   const config = loadAuthConfig();
 
   const password = createPasswordManager({
@@ -76,7 +98,7 @@ export function createAuth(options: CreateAuthOptions = {}) {
     maxAttempts: config.otpMaxAttempts,
   });
 
-  const base = {
+  const base: AuthKit = {
     password,
     tokens,
     otp,

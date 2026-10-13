@@ -54,6 +54,62 @@ describe("createOtpManager", () => {
       "OTP pepper must contain at least 32 bytes"
     );
   });
+
+  it("rejects expired OTPs", () => {
+    const shortLived = createOtpManager({
+      pepper: PEPPER,
+      expiresInSeconds: 1,
+    });
+    const { code, challenge } = shortLived.create({
+      destination: "user@example.com",
+      channel: "email",
+      purpose: "password_reset",
+    });
+
+    challenge.expiresAt = new Date(Date.now() - 1000);
+
+    const result = shortLived.verify(code, challenge);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("expired");
+  });
+
+  it("rejects after max attempts are exhausted", () => {
+    const limited = createOtpManager({
+      pepper: PEPPER,
+      maxAttempts: 1,
+    });
+    const { challenge } = limited.create({
+      destination: "user@example.com",
+      channel: "email",
+      purpose: "password_reset",
+    });
+
+    const first = limited.verify("000000", challenge);
+    expect(first.reason).toBe("mismatch");
+
+    const second = limited.verify("000000", first.challenge);
+    expect(second.ok).toBe(false);
+    expect(second.reason).toBe("exhausted");
+  });
+
+  it("rejects purpose and destination mismatches", () => {
+    const { code, challenge } = otp.create({
+      destination: "user@example.com",
+      channel: "email",
+      purpose: "password_reset",
+    });
+
+    expect(
+      otp.verify(code, challenge, { purpose: "login" }).reason
+    ).toBe("purpose_mismatch");
+
+    expect(
+      otp.verify(code, challenge, {
+        purpose: "password_reset",
+        destination: "other@example.com",
+      }).reason
+    ).toBe("destination_mismatch");
+  });
 });
 
 describe("createPasswordResetManager", () => {
@@ -121,5 +177,52 @@ describe("createPasswordResetManager", () => {
 
     expect(emailSend).toHaveBeenCalledOnce();
     expect(smsSend).toHaveBeenCalledOnce();
+  });
+
+  it("fails confirmReset with a wrong OTP", async () => {
+    const delivery: OtpDelivery = {
+      async send() {
+        /* no-op */
+      },
+    };
+    const otp = createOtpManager({ pepper: PEPPER });
+    const password = createPasswordManager({ rounds: 10 });
+    const reset = createPasswordResetManager({ otp, password, delivery });
+
+    const requested = await reset.requestReset({
+      to: "user@example.com",
+      channel: "email",
+    });
+
+    const failed = await reset.confirmReset({
+      code: "000000",
+      challenge: requested.challenge,
+      newPassword: "NewStrongPass123!",
+    });
+
+    expect(failed.ok).toBe(false);
+    if (!failed.ok) {
+      expect(failed.reason).toBe("mismatch");
+    }
+  });
+
+  it("throws when channel adapter is missing", async () => {
+    const delivery = createChannelDelivery({
+      email: {
+        async send() {
+          /* no-op */
+        },
+      },
+    });
+
+    await expect(
+      delivery.send({
+        to: "+15551234567",
+        code: "123456",
+        purpose: "password_reset",
+        channel: "sms",
+        expiresAt: new Date(),
+      })
+    ).rejects.toThrow('No OTP delivery adapter configured for channel "sms"');
   });
 });
