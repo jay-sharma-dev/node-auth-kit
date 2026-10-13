@@ -1,0 +1,57 @@
+{
+  "name": "jay-auth-kit",
+  "version": "0.2.0",
+  "description": "Reusable authentication utilities for Node.js and Express (JWT, bcrypt, pluggable OTP delivery)",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm test",
+    "example": "tsx examples/express-app.ts"
+  },
+  "keywords": [
+    "auth",
+    "authentication",
+    "jwt",
+    "bcrypt",
+    "otp",
+    "password-reset",
+    "express",
+    "middleware"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.6.5",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.7.3",
+    "vitest": "^5.0.4"
+  }
+}
