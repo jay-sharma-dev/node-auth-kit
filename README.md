@@ -12,7 +12,7 @@ Your application still owns the user database, registration endpoints, business 
 
 ## Requirements
 
-- Node.js **18** or later
+- Node.js **20** or later
 - TypeScript 5+ recommended for typed consumers
 - Express 4 or 5 (for middleware)
 
